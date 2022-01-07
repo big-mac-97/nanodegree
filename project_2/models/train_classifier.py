@@ -12,6 +12,8 @@ import matplotlib.pyplot as plt
 import nltk
 from nltk.tokenize import word_tokenize
 from nltk.stem import WordNetLemmatizer
+nltk.download('punkt')
+nltk.download('wordnet')
 
 from sklearn.model_selection import train_test_split
 from sklearn.model_selection import GridSearchCV
@@ -35,8 +37,8 @@ def load_data(database_filename):
     Y: model targets (dataframe containing category allocations)
     """
     # load data from database
-    engine = create_engine(f'sqlite:///{database_filepath}')
-    df = pd.read_sql_table("disaster_messages", con=engine)
+    engine = create_engine(f'sqlite:///{database_filename}')
+    df = pd.read_sql_table("messages_database", con=engine)
     X = df['message']
     Y = df.iloc[:, 4:]
     category_names = df.columns[4:]
@@ -69,7 +71,7 @@ def tokenize(text):
 
 def build_model():
     """
-    Builds classifier pipeline and tunes model using GridSearchCV.
+    Builds classifier pipeline and tunes model using GridSearchCV (see below).
 
     Returns:
     cv: classifier
@@ -82,7 +84,18 @@ def build_model():
         ('clf', MultiOutputClassifier(RandomForestClassifier()))
 
     ])
-
+    
+    """
+    Please note - this is the section of code intended to optimise the model using GridSearchCV.
+    Unfortunately I cannot get the code to execute in a timely manner (even left running for a couple of hours with only 1 
+    parameter in the parameters dict). Even the code executed as-is takes ~30 minutes to execute on my computer and generates
+    a ~900MB pickled model output which may be an indication that there is something very inefficient somewhere!
+    
+    Although I believe it should work eventually if the parameters and cv declarations are un-commented and the build_model()
+    function output line changed to return cv, I cannot verify. If you have any feedback please leave it on Udacity and
+    I will update the code.
+    
+    
     parameters = {
         'vect__ngram_range': ((1, 1), (1, 2)),
         'vect__max_df': (0.5, 0.75, 1.0),
@@ -91,8 +104,10 @@ def build_model():
     }
 
     cv = GridSearchCV(pipeline, param_grid=parameters)
-
-    return cv
+    """
+    
+    
+    return pipeline
 
 
 def evaluate_model(model, X_test, y_test, category_names):
@@ -115,14 +130,15 @@ def evaluate_model(model, X_test, y_test, category_names):
 
 
 def save_model(model, model_filepath):
-    pickle.dump(model, open(model_filepath))
+    with open(model_filepath, 'wb') as f:
+        pickle.dump(model, f)
 
 
 def main():
     if len(sys.argv) == 3:
-        database_filepath, model_filepath = sys.argv[1:]
-        print('Loading data...\n    DATABASE: {}'.format(database_filepath))
-        X, Y, category_names = load_data(database_filepath)
+        database_filename, model_filepath = sys.argv[1:]
+        print('Loading data...\n    DATABASE: {}'.format(database_filename))
+        X, Y, category_names = load_data(database_filename)
         X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2)
         
         print('Building model...')
